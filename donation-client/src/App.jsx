@@ -16,7 +16,7 @@ function App() {
             </header>
             <div className=" max-w-[1320px] mx-auto px-4 py-6">
                 <div className="bg-teal-900 text-white p-4 rounded-md text-center mb-6">
-                    <p>ফেসবুক পেজ: <a href="https://www.facebook.com/abutalhazubayermunna" target="_blank" rel="noopener noreferrer" className="font-bold underline">দশমাইল ছাত্র সমাজ</a></p>
+                    <p>ফেসবুক পেজ: <a href="https://www.facebook.com/profile.php?id=61564776034200" target="_blank" rel="noopener noreferrer" className="font-bold underline">দশমাইল ছাত্র সমাজ</a></p>
                 </div>
                 <div className="bg-white p-6 rounded-lg shadow-md">
                     <div className="grid grid-cols-12 grid-rows-2 max-h-[700px] gap-4 mb-6">
