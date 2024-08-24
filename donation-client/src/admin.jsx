@@ -1,190 +1,156 @@
-import { useState } from 'react';
-import styled from 'styled-components';
+import { useState, useEffect } from 'react';
 
-const Container = styled.div`
-    width: 80%;
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
-    font-family: 'Noto Sans Bengali', sans-serif; /* Ensure Bangla font is applied */
-`;
+// Function to convert English numbers to Bengali numbers
+const convertToBengaliNumber = (number) => {
+    const englishDigits = '0123456789';
+    const bengaliDigits = '০১২৩৪৫৬৭৮৯';
+  
+    return number.toString().split('').map(char => {
+        const index = englishDigits.indexOf(char);
+        return index !== -1 ? bengaliDigits[index] : char;
+    }).join('');
+};
 
-const Header = styled.header`
-    background-color: #00796b;
-    color: #fff;
-    padding: 20px;
-    text-align: center;
-    border-radius: 8px 8px 0 0;
-    margin-bottom:12px
-`;
-
-const Title = styled.h1`
-    margin: 0;
-    font-size: 24px;
-    font-weight: bold;
-`;
-
-const Form = styled.form`
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-`;
-
-const InputGroup = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-`;
-
-const Label = styled.label`
-    font-size: 16px;
-    color: #333;
-`;
-
-const Input = styled.input`
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 100%;
-`;
-
-const Button = styled.button`
-    padding: 15px;
-    font-size: 16px;
-    color: #fff;
-    background-color: #00796b;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-
-    &:hover {
-        background-color: #004d40;
-    }
-`;
-
-const PreviousAmounts = styled.div`
-    margin-top: 20px;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background-color: #f0f0f0;
-`;
-
-const AmountItem = styled.p`
-    font-size: 16px;
-    color: #333;
-    margin: 5px 0;
-`;
-
-const LoginForm = styled.div`
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    max-width: 300px;
-    margin: 0 auto;
-`;
-
-const GlobalStyle = styled`
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;700&display=swap');
-    body {
-        font-family: 'Noto Sans Bengali', Arial, sans-serif;
-    }
-`;
-
-const AdminPanel = () => {
-    const [totalMoney, setTotalMoney] = useState('');
-    const [todaysMoney, setTodaysMoney] = useState('');
-    const [previousTotal, setPreviousTotal] = useState(33572); // Example previous amount
-    const [previousTodays, setPreviousTodays] = useState(0);  // Example previous amount
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+const App = () => {
+    const [dailyAmount, setDailyAmount] = useState('');
+    const [totalAmount, setTotalAmount] = useState(0);
+    const [latestDaily, setLatestDaily] = useState(0);
+    const [lastUpdated, setLastUpdated] = useState('');
     const [password, setPassword] = useState('');
-    const correctPassword = 'admin123';
+    const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('authenticated') === 'true');
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setPreviousTotal(totalMoney);
-        setPreviousTodays(todaysMoney);
-        setTotalMoney('');
-        setTodaysMoney('');
-        alert(`মোট টাকা: ${totalMoney}\nআজকের টাকা: ${todaysMoney}`);
-    };
-
-    const handleLogin = (e) => {
-        e.preventDefault();
-        if (password === correctPassword) {
-            setIsAuthenticated(true);
-        } else {
-            alert('ভুল পাসওয়ার্ড');
+    // Fetch latest data on component mount
+    const fetchLatestData = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/fund-info/latest');
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            const data = await response.json();
+            setTotalAmount(data.totalAmount);
+            setLatestDaily(data.dailyAmount);
+            setLastUpdated(data.updatedAt); // Update the lastUpdated state
+        } catch (error) {
+            console.error('Error:', error);
         }
     };
 
-    if (!isAuthenticated) {
-        return (
-            <>
-                <GlobalStyle />
-                <Container>
-                    <Header>
-                        <Title>লগইন</Title>
-                    </Header>
-                    <LoginForm>
-                        <InputGroup>
-                            <Label htmlFor="password">পাসওয়ার্ড</Label>
-                            <Input
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchLatestData();
+        }
+    }, [isAuthenticated]);
+
+    const handleLogin = (e) => {
+        e.preventDefault();
+        // Replace 'your-password' with your actual password
+        if (password === 'secureAdmin') {
+            localStorage.setItem('authenticated', 'true');
+            setIsAuthenticated(true);
+        } else {
+            alert('Incorrect password');
+        }
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('authenticated');
+        setIsAuthenticated(false);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch('http://localhost:5000/fund-info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    dailyAmount: parseFloat(dailyAmount),
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to save data');
+            }
+
+            const latestData = await response.json();
+            setTotalAmount(latestData.totalAmount);
+            setLatestDaily(latestData.dailyAmount);
+            setLastUpdated(latestData.updatedAt); // Update the lastUpdated state
+
+            // Clear input field
+            setDailyAmount('');
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    };
+
+    return (
+        <div className="flex flex-col items-center p-6 bg-gray-100 min-h-screen">
+            {!isAuthenticated ? (
+                <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-sm">
+                    <h1 className="text-2xl font-bold mb-4 text-center">Login</h1>
+                    <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                        <div className="flex flex-col">
+                            <label htmlFor="password" className="text-lg font-medium text-gray-700">Password</label>
+                            <input
                                 type="password"
                                 id="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                className="p-2 border border-gray-300 rounded"
+                                required
                             />
-                        </InputGroup>
-                        <Button onClick={handleLogin}>লগইন</Button>
-                    </LoginForm>
-                </Container>
-            </>
-        );
-    }
-
-    return (
-        <>
-            <GlobalStyle />
-            <Container>
-                <Header>
-                    <Title>অ্যাডমিন প্যানেল</Title>
-                </Header>
-                <Form onSubmit={handleSubmit}>
-                    <InputGroup>
-                        <Label htmlFor="totalMoney">মোট টাকা</Label>
-                        <Input
-                            type="number"
-                            id="totalMoney"
-                            value={totalMoney}
-                            onChange={(e) => setTotalMoney(e.target.value)}
-                        />
-                    </InputGroup>
-                    <InputGroup>
-                        <Label htmlFor="todaysMoney">আজকের টাকা</Label>
-                        <Input
-                            type="number"
-                            id="todaysMoney"
-                            value={todaysMoney}
-                            onChange={(e) => setTodaysMoney(e.target.value)}
-                        />
-                    </InputGroup>
-                    <Button type="submit">জমা দিন</Button>
-                </Form>
-                <PreviousAmounts>
-                    <h2>পূর্ববর্তী পরিমাণ</h2>
-                    <AmountItem>মোট টাকা: {previousTotal}</AmountItem>
-                    <AmountItem>আজকের টাকা: {previousTodays}</AmountItem>
-                </PreviousAmounts>
-            </Container>
-        </>
+                        </div>
+                        <button
+                            type="submit"
+                            className="bg-teal-600 text-white p-2 rounded hover:bg-teal-700 transition"
+                        >
+                            Login
+                        </button>
+                    </form>
+                </div>
+            ) : (
+                <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg">
+                    <button
+                        onClick={handleLogout}
+                        className="bg-red-600 text-white p-2 rounded mb-4 hover:bg-red-700 transition"
+                    >
+                        Logout
+                    </button>
+                    <h1 className="text-2xl font-bold mb-4 text-center">অ্যাডমিন প্যানেল</h1>
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <div className="flex flex-col">
+                            <label htmlFor="dailyAmount" className="text-lg font-medium text-gray-700">আজকের সংগ্রহ</label>
+                            <input
+                                type="number"
+                                id="dailyAmount"
+                                value={dailyAmount}
+                                onChange={(e) => setDailyAmount(e.target.value)}
+                                className="p-2 border border-gray-300 rounded"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            className="bg-teal-600 text-white p-2 rounded hover:bg-teal-700 transition"
+                        >
+                            Submit
+                        </button>
+                    </form>
+                    <div className="mt-6 p-4 border border-gray-300 rounded bg-gray-50">
+                        <h2 className="text-xl font-semibold mb-2">মোট সংগ্রগ</h2>
+                        <p className="text-lg text-gray-800">{convertToBengaliNumber(totalAmount)} টাকা</p>
+                        <h2 className="text-xl font-semibold mt-4 mb-2">আজকের মোট সংগ্রহ</h2>
+                        <p className="text-lg text-gray-800">{convertToBengaliNumber(latestDaily)} টাকা</p>
+                        <h2 className="text-xl font-semibold mt-4 mb-2">শেষ আপডেট</h2>
+                        <p className="text-lg text-gray-800">{lastUpdated}</p> {/* Display last updated time */}
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
-export default AdminPanel;
+export default App;
